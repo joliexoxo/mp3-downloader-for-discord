@@ -5,7 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import Database from 'better-sqlite3';
 import { StatsRepository } from '../src/database/StatsRepository.js';
-import { createHistoryEmbed, showHistory } from '../src/history.js';
+import { createHistoryEmbed, showHistory, createHistoryComponents, navigateHistory } from '../src/history.js';
 
 const track = {title: 'Track', artist: 'Artist', url: 'https://example.com/track'};
 
@@ -63,8 +63,49 @@ test('history response is private and uses the caller ID only', async () => {
   }});
   assert.equal(flags, 64);
   assert.equal(queriedUser, 'caller');
-  assert.equal(page, 2);
+  assert.equal(page, 1);
   assert.match(reply.embeds[0].toJSON().description, /No downloads yet/);
+});
+
+test('history buttons disable navigation at the first and last page', () => {
+  const buttons = history => createHistoryComponents('caller', history)[0].toJSON().components;
+  const first = buttons({page: 1, pages: 3});
+  assert.equal(first[0].disabled, true);
+  assert.equal(first[1].disabled, false);
+  assert.equal(first[1].custom_id, 'history:caller:2');
+  const middle = buttons({page: 2, pages: 3});
+  assert.ok(middle.every(button => !button.disabled));
+  assert.equal(middle[0].custom_id, 'history:caller:1');
+  const last = buttons({page: 3, pages: 3});
+  assert.equal(last[0].disabled, false);
+  assert.equal(last[1].disabled, true);
+  assert.ok(buttons({page: 1, pages: 1}).every(button => button.disabled));
+});
+
+test('history navigation acknowledges the click and loads only the owner page', async () => {
+  let acknowledged = false;
+  let edited;
+  await navigateHistory({
+    customId: 'history:caller:2', user: {id: 'caller'},
+    deferUpdate: async () => {acknowledged = true;},
+    editReply: async payload => {edited = payload;}
+  }, {getHistory: (id, page) => {
+    assert.equal(acknowledged, true);
+    assert.equal(id, 'caller');
+    assert.equal(page, 2);
+    return {tracks: [{...track, format: 'mp3', downloaded_at: 123}], total: 6, page: 2, pages: 2};
+  }});
+  assert.match(edited.embeds[0].toJSON().footer.text, /Page 2\/2/);
+  assert.equal(edited.components[0].toJSON().components[1].disabled, true);
+});
+
+test('another user and malformed history buttons cannot query the database', async () => {
+  for (const customId of ['history:other:2', 'history:caller:0', 'history:caller:invalid']) {
+    let response;
+    await navigateHistory({customId, user: {id: 'caller'}, reply: async payload => {response = payload;}},
+      {getHistory: () => {throw new Error('must not query');}});
+    assert.equal(response.flags, 64);
+  }
 });
 
 test('long titles and URLs stay within Discord embed limits', () => {

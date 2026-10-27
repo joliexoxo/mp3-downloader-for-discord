@@ -8,12 +8,11 @@ A Node.js Discord bot that sends audio files straight to your chat. Install it o
 | --- | --- |
 | `/download url:` | Shows the track title and cover, then lets you pick MP3, FLAC, WAV, or OGG. |
 | `/history` | Shows your successful downloads in a private response. |
-| `/history page:2` | Opens another page of your download history. |
 | `/stats` | Shows uptime, ping, server count, and total downloads. |
 
 Only the person who runs `/download` can use its format menu. The menu expires after 60 seconds. Once you pick a format, the bot downloads, converts, and sends the file.
 
-History includes the title, artist, format, source link, and date, with five tracks per page, newest first. It stays saved across restarts. Downloads made before history was added cannot be recovered per user: the bot previously stored only a global counter.
+History includes the title, artist, format, source link, and date, with five tracks per page, newest first. Use the **Previous** and **Next** buttons to switch pages. Buttons are disabled when there is no page in that direction. History stays saved across restarts. Downloads made before history was added cannot be recovered per user: the bot previously stored only a global counter.
 
 OGG uses Vorbis. FLAC and WAV can exceed Discord's upload limit and cannot restore quality missing from the source. Cover art is embedded in the audio file when supported; WAV does not include embedded cover art.
 

@@ -5,7 +5,7 @@ import { config } from 'dotenv';
 import { DownloaderService } from './downloader/DownloaderService.js';
 import { StatsRepository } from './database/StatsRepository.js';
 import { pickAudioFormat } from './downloader/FormatPicker.js';
-import { showHistory } from './history.js';
+import { showHistory, navigateHistory } from './history.js';
 import { createLoadingEmbed, createSuccessEmbed, createErrorEmbed, createStatsEmbed } from './embeds.js';
 
 config();
@@ -40,15 +40,7 @@ const commands = [
     name: 'history',
     description: 'Check your past downloads',
     integration_types: [0, 1],
-    contexts: [0, 1, 2],
-    options: [{
-      name: 'page',
-      description: 'Pick a page of your download history',
-      type: 4,
-      min_value: 1,
-      max_value: 1000000,
-      required: false
-    }]
+    contexts: [0, 1, 2]
   },
   {
     name: 'stats',
@@ -83,6 +75,10 @@ client.once('ready', async () => {
 });
 
 async function handleInteraction(interaction) {
+  if (interaction.isButton() && interaction.customId.startsWith('history:')) {
+    await navigateHistory(interaction, statsRepository);
+    return;
+  }
   if (!interaction.isChatInputCommand()) return;
 
   if (interaction.commandName === 'history') {
