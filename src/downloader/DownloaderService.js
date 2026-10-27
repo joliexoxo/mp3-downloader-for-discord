@@ -6,6 +6,8 @@ import { SpotifyResolver } from './SpotifyResolver.js';
 import { Metadata } from './Metadata.js';
 import { Formatter } from '../utils/Formatter.js';
 import { getAudioFormat } from './AudioFormats.js';
+import { fetchTrackPreview } from './TrackPreview.js';
+import { PreviewCache } from './PreviewCache.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -29,6 +31,20 @@ export class DownloaderService {
     if (!['https:', 'http:'].includes(parsed.protocol)) {
       throw new Error('Only HTTP(S) music URLs are supported.');
     }
+    this.previewCache ??= new PreviewCache();
+    const key = parsed.href;
+    return this.previewCache.getOrCreate(key, async () => {
+      const pendingMetadata = this.resolveTrack(key);
+      // The lightweight preview may finish before full extraction fails.
+      pendingMetadata.catch(() => this.previewCache.entries.delete(key));
+      const lightweight = fetchTrackPreview(key).then(preview => preview
+        ? { ...preview, pendingMetadata }
+        : pendingMetadata);
+      return Promise.race([pendingMetadata, lightweight]);
+    });
+  }
+
+  async resolveTrack(url) {
     const isSpotify = SpotifyResolver.isSpotifyUrl(url);
     let downloadUrl = url;
     let spotifyData = null;
@@ -58,13 +74,15 @@ export class DownloaderService {
 
   async download(url, maxSizeBytes = 10 * 1024 * 1024, format = 'mp3', prepared = null) {
     getAudioFormat(format);
-    const { downloadUrl, spotifyData, customMetadata, rawMetadata } = prepared || await this.prepare(url);
+    const preview = prepared || await this.prepare(url);
+    const { downloadUrl, spotifyData, customMetadata, rawMetadata } = preview.pendingMetadata
+      ? await preview.pendingMetadata : preview;
     const isSpotify = Boolean(spotifyData);
     const requestDir = fs.mkdtempSync(path.join(this.downloadsDir, 'track-'));
     try {
     const outputTemplate = path.join(requestDir, '%(title).100s.%(ext)s');
     
-    const filePath = await this.engine.downloadAndConvert(downloadUrl, outputTemplate, customMetadata, format);
+    const filePath = await this.engine.downloadAndConvert(downloadUrl, outputTemplate, customMetadata, format, rawMetadata);
     
     if (!fs.existsSync(filePath)) {
       throw new Error('Downloaded file could not be found');

@@ -75,6 +75,8 @@ Variables optionnelles : `FFMPEG_PATH`, `YTDLP_PATH` et `COOKIES_PATH`. Avec Doc
 
 ## Fonctionnement et limites
 
+Le titre et la cover YouTube/SoundCloud sont chargés via oEmbed pendant l'extraction des informations audio. Si oEmbed échoue, le bot utilise les métadonnées de yt-dlp. Un cache mémoire limité à 64 liens pendant 2 minutes partage les requêtes identiques. Le téléchargement réutilise les informations extraites et privilégie un flux audio seul.
+
 - YouTube, SoundCloud et les sources reconnues par yt-dlp ; disponibilité selon la plateforme et le réseau du VPS.
 - Spotify sert à récupérer les métadonnées puis à rechercher un équivalent sur YouTube. Pour un album ou une playlist Spotify, seul le premier titre est traité.
 - Conversion MP3, FLAC, WAV ou OGG avec métadonnées ; aucune clé SoundCloud n'est utilisée.

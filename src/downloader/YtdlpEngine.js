@@ -10,7 +10,8 @@ const __dirname = path.dirname(__filename);
 const execFilePromise = promisify(execFile);
 
 export class YtdlpEngine {
-  constructor() {
+  constructor({ execute = execFilePromise } = {}) {
+    this.execute = execute;
     this.ffmpegLocation = process.env.FFMPEG_PATH?.trim();
     this.executable = process.env.YTDLP_PATH || 'yt-dlp';
     this.cookiesPath = process.env.COOKIES_PATH || path.resolve(__dirname, '../../cookies.txt');
@@ -20,6 +21,7 @@ export class YtdlpEngine {
     const args = [
       '--ignore-config',
       '--no-playlist',
+      '--format', 'bestaudio/best',
       '--js-runtimes', 'node',
       '--no-warnings'
     ];
@@ -39,7 +41,7 @@ export class YtdlpEngine {
   async fetchRawMetadata(url) {
     try {
       const args = [...this.buildBaseArgs(), '--dump-json', url];
-      const { stdout } = await execFilePromise(this.executable, args, {
+      const { stdout } = await this.execute(this.executable, args, {
         timeout: 120_000,
         maxBuffer: 8 * 1024 * 1024,
         env: { ...process.env, PYTHONIOENCODING: 'utf-8' }
@@ -50,7 +52,7 @@ export class YtdlpEngine {
     }
   }
 
-  async downloadAndConvert(url, outputTemplate, customMetadata = null, format = 'mp3') {
+  async downloadAndConvert(url, outputTemplate, customMetadata = null, format = 'mp3', rawMetadata = null) {
     const selectedFormat = getAudioFormat(format);
     try {
       const args = [
@@ -77,13 +79,16 @@ export class YtdlpEngine {
         }
       }
 
-      args.push(
-        '--print',
-        'after_move:filepath',
-        url
-      );
+      args.push('--print', 'after_move:filepath');
+      if (rawMetadata) {
+        const infoPath = path.join(path.dirname(outputTemplate), 'source.info.json');
+        fs.writeFileSync(infoPath, JSON.stringify(rawMetadata), { mode: 0o600 });
+        args.push('--load-info-json', infoPath);
+      } else {
+        args.push(url);
+      }
       
-      const { stdout } = await execFilePromise(this.executable, args, {
+      const { stdout } = await this.execute(this.executable, args, {
         timeout: 600_000,
         maxBuffer: 8 * 1024 * 1024,
         env: { ...process.env, PYTHONIOENCODING: 'utf-8' }
