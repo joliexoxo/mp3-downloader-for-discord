@@ -6,6 +6,7 @@ import { DownloaderService } from './downloader/DownloaderService.js';
 import { StatsRepository } from './database/StatsRepository.js';
 import { pickAudioFormat } from './downloader/FormatPicker.js';
 import { showHistory, navigateHistory } from './history.js';
+import { extractCommand } from './extract/command.js';
 import { createLoadingEmbed, createSuccessEmbed, createErrorEmbed, createStatsEmbed } from './embeds.js';
 
 config();
@@ -22,6 +23,13 @@ const client = new Client({
 });
 
 const commands = [
+  {
+    name: 'extract',
+    description: 'Check an audio file\'s metadata and cover art',
+    integration_types: [0, 1],
+    contexts: [0, 1, 2],
+    options: [{ name: 'file', type: 11, description: 'Drop your audio file here', required: true }]
+  },
   {
     name: 'download',
     description: 'Grab a track from YouTube, SoundCloud, and more',
@@ -80,6 +88,11 @@ async function handleInteraction(interaction) {
     return;
   }
   if (!interaction.isChatInputCommand()) return;
+
+  if (interaction.commandName === 'extract') {
+    await extractCommand(interaction);
+    return;
+  }
 
   if (interaction.commandName === 'history') {
     await showHistory(interaction, statsRepository);

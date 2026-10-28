@@ -7,6 +7,7 @@ A Node.js Discord bot that sends audio files straight to your chat. Install it o
 | Command | What it does |
 | --- | --- |
 | `/download url:` | Shows the track title and cover, then lets you pick MP3, FLAC, WAV, or OGG. |
+| `/extract file:` | Reads an uploaded audio file's metadata and shows its embedded cover art. |
 | `/history` | Shows your successful downloads in a private response. |
 | `/stats` | Shows uptime, ping, server count, and total downloads. |
 
@@ -15,6 +16,10 @@ Only the person who runs `/download` can use its format menu. The menu expires a
 History includes the title, artist, format, source link, and date, with five tracks per page, newest first. Use the **Previous** and **Next** buttons to switch pages. Buttons are disabled when there is no page in that direction. History stays saved across restarts. Downloads made before history was added cannot be recovered per user: the bot previously stored only a global counter.
 
 OGG uses Vorbis. FLAC and WAV can exceed Discord's upload limit and cannot restore quality missing from the source. Cover art is embedded in the audio file when supported; WAV does not include embedded cover art.
+
+## Extracting metadata
+
+Run `/extract` and attach an audio file using the `file` option. The bot displays embedded tags (title, artist, album, date, genre, track, and more), duration, codec, bitrate, sample rate, and channels, with embedded cover art below the description. Complete metadata is also attached as `metadata.json`. Files without embedded artwork show a clear "Not embedded" status. Uploaded files are limited to 100 MiB and temporary files are deleted after processing. The command works with server and profile installations.
 
 ## Discord setup
 
@@ -47,6 +52,7 @@ On PowerShell, use `Copy-Item .env.example .env` to create the configuration fil
 | `DISCORD_TOKEN` | Your Discord bot token. Required. |
 | `CLIENT_ID` | Your Discord Application ID. Required. |
 | `FFMPEG_PATH` | Optional path to ffmpeg or its directory. Leave blank to use PATH. |
+| `FFPROBE_PATH` | Optional ffprobe executable or directory for `/extract`. Leave blank to use PATH. |
 | `YTDLP_PATH` | Optional yt-dlp executable path. Defaults to `yt-dlp`. |
 | `COOKIES_PATH` | Optional Netscape cookies file. Defaults to `cookies.txt` in the project root. |
 
